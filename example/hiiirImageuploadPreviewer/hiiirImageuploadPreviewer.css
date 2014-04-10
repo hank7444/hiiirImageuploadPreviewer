@@ -1,0 +1,9 @@
+/* 用來做IE8預覽 */
+.hiiirImageuploadPreviewer-ie8_preview {
+  filter:progid:DXImageTransform.Microsoft.AlphaImageLoader(sizingMethod=scale);
+}
+
+/* 用來顯示IE8圖片尺寸 */
+.hiiirImageuploadPreviewer_ie8_size { 
+  filter:progid:DXImageTransform.Microsoft.AlphaImageLoader(sizingMethod=scale);
+}
