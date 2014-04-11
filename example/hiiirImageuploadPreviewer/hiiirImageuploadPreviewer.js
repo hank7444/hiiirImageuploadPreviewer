@@ -164,11 +164,12 @@ $('#testarea').hiiirLoading('fadeOut', {
 	$.fn.hiiirImageuploadPreviewer = function(settings) {
 
 		var that = this;
+		var browser = isIE(8, 'lte') ? 'ie8' : 'html5';
 		var settings  = $.extend({}, _defaultSettings, settings, {
 			selector: that.length > 0 ? $(that[0]) : undefined
 		});
 		
-		var init = function() {
+		var init = function(browser) {
 
 
 			/*
@@ -300,10 +301,54 @@ $('#testarea').hiiirLoading('fadeOut', {
 					'previewer': previewer,
 					'fileSize': fileSize,
 					'imgSize': imgSize,
-					'imgTypeRegex': imgType
+					'imgTypeRegex': imgType,
+					'getPreviewer': getPreviewer,
+					'browser': browser
 				};
 
 			})();
+
+
+			// 如果DOM要作處理, 在這邊控制
+			var initDomHash = {
+
+				'html5': function() {
+					
+				},
+				'ie8': function() {
+
+					var previewerWrap = null;
+					var imgForSize = null;
+					var previewer = initSettings.getPreviewer(settings.previewer);
+					var previewerWidth = previewer.attr('width');
+					var previewerHeight = previewer.attr('height');
+					var hasPreviewWrap = false;
+					var hasImgForSize = false;
+
+					if (previewer) {
+
+						hasPreviewWrap = previewer.parent('.hiiirImageuploadPreviewer-ie8-preview').length;
+						hasImgForSize = $(document).find('.hiiirImageuploadPreviewer-ie8-size').length;
+
+						// 如果沒有PreviewWrap, 加入一個, 並設定寬高
+						if (!hasPreviewWrap) {
+							previewerWrap = $(document.createElement('div')).addClass('hiiirImageuploadPreviewer-ie8-preview');
+							previewerWrap.css({'width': previewerWidth});
+							previewerWrap.css({'height': previewerHeight});
+							previewer.wrap(previewerWrap);
+						} 
+
+						if (!hasImgForSize) {
+							imgForSize = $(document.createElement('img')).addClass('hiiirImageuploadPreviewer-ie8-size');
+							imgForSize.appendTo('body');
+						}
+					}
+
+				}
+			};
+			initDomHash[browser]();
+
+
 
 			/*
 				初始化每次的更換圖片時要做的邏輯, 這邊會判斷如果是IE8(該死的IE8!), 就用IE自己的大便,
@@ -319,207 +364,317 @@ $('#testarea').hiiirLoading('fadeOut', {
 				TODO: 多檔案處理, 目前只會處理單個檔案或檔案列表第一個檔案
 
 			*/
+
+			var imgSizeConditionHash = {
+				'>': function(a, b) {
+					return a > b;
+				},
+				'<': function(a, b) {
+					return a < b;
+				},
+				'<=': function(a, b) {
+					return a <= b;
+				},
+				'>=': function(a, b) {
+					return a >= b;
+				},
+				'==': function(a, b) {
+					return a == b;
+				}
+			};
+
+			
+			var validateHash = {
+
+				'html5': (function() {
+
+					return {
+
+						getImgSize: function(file, callback) {
+
+							var fileReaderForGetSize = new window.FileReader();
+
+							fileReaderForGetSize.onload = function(e) {
+
+								var img = new Image();
+								var imgBinary = e.target.result
+								
+								img.onload = function(e) {
+
+									if (typeof callback == 'function') {
+										callback(this.width, this.height, imgBinary);
+									}
+								};
+								img.src = imgBinary;
+							};
+							fileReaderForGetSize.readAsDataURL(file);
+						},
+						validate: function(file, width, height) {
+
+							var fileName = file.name;
+							var fileSize = file.size;
+							var fileType = file.type;
+							var width = width;
+							var height = height;
+					
+							var validDetail = {
+								fileSize: false,
+								fileType: false,
+								imgSize: false
+							};
+
+
+							// 驗證檔案大小
+							if (initSettings.fileSize.size > fileSize) {
+								validDetail.fileSize = true;
+							}
+
+							// 驗證檔案類型, 如果有檔案類型優先驗證, 如果沒有則判斷檔案副檔名
+							if (!fileType) {
+
+								if (initSettings.imgTypeRegex.fileType.test(fileType)) {
+									validDetail.fileType = true;
+								}
+							}
+							else {
+
+								if (initSettings.imgTypeRegex.fileName.test(fileName)) {
+									validDetail.fileType = true;
+								}	
+							}
+
+							// 驗證圖片長寬大小
+							var validWidth = initSettings.imgSize.width.value;
+							var validWidthCondi = initSettings.imgSize.width.condition;
+							var validHeight = initSettings.imgSize.height.value; 
+							var validHeightCondi = initSettings.imgSize.height.condition; 
+							var isValidWidth = true;
+							var isValidHeight = true;
+
+							if (validWidth > 0) {
+								isValidWidth = imgSizeConditionHash[validWidthCondi](width, validWidth);
+							}
+							if (validHeight > 0) {
+								isValidHeight = imgSizeConditionHash[validHeightCondi](height, validHeight);
+							}
+
+							/*
+							console.log(validWidthCondi);
+							console.log(validHeightCondi);
+							console.log(width);
+							console.log(height);
+							console.log(validWidth);
+							console.log(validHeight);
+							console.log(isValidWidth);
+							console.log(isValidHeight);
+							*/
+
+							if (isValidWidth && isValidHeight) {
+								validDetail.imgSize = true;
+							}
+
+							var validateResult = {
+								filename: fileName,
+								fileSize: fileSize || null,
+								fileSizeReading: fileSize ? (fileSize / sizeTypeHash[initSettings.fileSize.sizeType]).toFixed(2) + ' ' + initSettings.fileSize.sizeType : null,
+								validDetail: validDetail,
+								checkValid: function() {
+
+									this.isValid = false;
+
+									if (validDetail.fileSize && validDetail.fileType && validDetail.imgSize) {
+										this.isValid = true;
+									}
+									return this;
+								}
+							}.checkValid();
+
+							return validateResult;
+						}
+					};
+				
+				})(),
+				'ie8': (function() {
+
+					return {
+
+						getImgSize: function(file, callback) {
+
+							var imgSrc = '';
+							var imgForSize =  $('body').find('.hiiirImageuploadPreviewer-ie8-size');
+
+							file.select();
+							imgSrc = document.selection.createRange().text;
+
+							// 如果圖檔太大會直接壞掉..拿約11mb的圖就失敗了							
+							if (imgForSize.length) {
+								
+								try {
+									imgForSize[0].filters.item('DXImageTransform.Microsoft.AlphaImageLoader').src = imgSrc;
+
+									setTimeout(function() {
+
+										if (typeof callback == 'function') {
+											callback(imgForSize[0].offsetWidth, imgForSize[0].offsetHeight, imgSrc);
+										}
+									}, 100);
+								}
+								catch(e) {
+									alert('圖片檔案過大，無法偵測圖片尺寸與預覽!');
+								}
+							}
+					
+						}
+					};
+				})()
+			}
+
+
+
 			var initChangeEvent = function(initSettings) {
 
-				var isIE8Lte = isIE(8, 'lte');
+				
 				var selector = initSettings.selector;
-				var files = null;
-				var fileReaderForGetSize = new window.FileReader();
+				var isIE8Lte = isIE(8, 'lte');
+				var processor = null;
+				var previewer = initSettings.getPreviewer(settings.previewer);
 
-				var getImgSize = function(file, callback) {
+				console.log(previewer);
 
-					fileReaderForGetSize.onload = function(e) {
+				var defaultPreviewerImageUrl = previewer.attr('src');				
+				var failRefresh = function(input) {
 
-						var img = new Image();
-						var imgBinary = e.target.result
-						
-						img.onload = function(e) {
+					if (previewer) {
+						$(input).val(''); // 清除input欄味
+						previewer.attr('src', defaultPreviewerImageUrl);
+					}
+				};
 
-							if (typeof callback == 'function') {
-								callback(this.width, this.height, imgBinary);
+				var processorHash = {
+
+					'html5': function(validateFunc) {
+				
+						return function(that) {
+
+							var files = that.files;
+
+							if (files.length > 0) {
+
+								var file = files[0];
+								var isValidObj = null;
+
+								// 取得圖片寬高後, 進行圖檔驗證
+								validateFunc.getImgSize(file, function(width, height, imgBinary) {
+
+									validObj = validateFunc.validate(file, width, height);
+		
+									// 驗證通過，顯示圖片在previewer, 不通過則拋出validateCallback
+									if (validObj.isValid && settings.previewer) {
+										settings.previewer.attr('src', imgBinary);
+									}
+									else {
+										if (typeof settings.validateCallback == 'function') {
+											settings.validateCallback(validObj);
+											failRefresh(that);
+										}
+									}
+								});
 							}
 						};
-						img.src = imgBinary;
-					};
-					fileReaderForGetSize.readAsDataURL(file);
-				};
-				var validate = function(file, width, height) {
+					},
+					'ie8': function(validateFunc) {
 
-					var fileName = file.name;
-					var fileSize = file.size;
-					var fileType = file.type;
-					var width = width;
-					var height = height;
-					var imgSizeConditionHash = {
-						'>': function(a, b) {
-							return a > b;
-						},
-						'<': function(a, b) {
-							return a < b;
-						},
-						'<=': function(a, b) {
-							return a <= b;
-						},
-						'>=': function(a, b) {
-							return a >= b;
-						},
-						'==': function(a, b) {
-							return a == b;
-						}
-					};
-					var validDetail = {
-						fileSize: false,
-						fileType: false,
-						imgSize: false
-					};
+						return function(that) {
+
+							var previewer = initSettings.getPreviewer(settings.previewer);
+							var previewerWrap = '';
+							var imgSrc = '';
+							var fileName = $(that).val();
 
 
-					// 驗證檔案大小
-					if (initSettings.fileSize.size > fileSize) {
-						validDetail.fileSize = true;
-					}
+							if (fileName) {
 
-					// 驗證檔案類型, 如果有檔案類型優先驗證, 如果沒有則判斷檔案副檔名
-					if (!fileType) {
+								// 取得圖片寬高後, 進行圖檔驗證
+								validateFunc.getImgSize(that, function(width, height, imgSrc) {
 
-						if (initSettings.imgTypeRegex.fileType.test(fileType)) {
-							validDetail.fileType = true;
-						}
-					}
-					else {
+									//alert(width);
+									//alert(imgSrc);
 
-						if (initSettings.imgTypeRegex.fileName.test(fileName)) {
-							validDetail.fileType = true;
-						}	
-					}
 
-					// 驗證圖片長寬大小
-					var validWidth = initSettings.imgSize.width.value;
-					var validWidthCondi = initSettings.imgSize.width.condition;
-					var validHeight = initSettings.imgSize.height.value; 
-					var validHeightCondi = initSettings.imgSize.height.condition; 
-					var isValidWidth = true;
-					var isValidHeight = true;
+									if (previewer) {
+										previewerWrap = previewer.parent('.hiiirImageuploadPreviewer-ie8-preview')[0]; // 取得原始js obj
+										previewerWrap.filters.item('DXImageTransform.Microsoft.AlphaImageLoader').src = imgSrc;
+										previewer.css('visibility', 'hidden');
 
-					if (validWidth > 0) {
-						isValidWidth = imgSizeConditionHash[validWidthCondi](width, validWidth);
-					}
-					if (validHeight > 0) {
-						isValidHeight = imgSizeConditionHash[validHeightCondi](height, validHeight);
-					}
+									}
 
-					/*
-					console.log(validWidthCondi);
-					console.log(validHeightCondi);
-					console.log(width);
-					console.log(height);
-					console.log(validWidth);
-					console.log(validHeight);
-					console.log(isValidWidth);
-					console.log(isValidHeight);
-					*/
 
-					if (isValidWidth && isValidHeight) {
-						validDetail.imgSize = true;
-					}
+									/*
+									validObj = validateFunc.validate(file, width, height);
+		
+									// 驗證通過，顯示圖片在previewer, 不通過則拋出validateCallback
+									if (validObj.isValid && settings.previewer) {
+										settings.previewer.attr('src', imgBinary);
+									}
+									else {
+										if (typeof settings.validateCallback == 'function') {
+											settings.validateCallback(validObj);
+											failRefresh(that);
+										}
+									}*/
 
-					var validateResult = {
-						filename: fileName,
-						fileSize: fileSize || null,
-						fileSizeReading: fileSize ? (fileSize / sizeTypeHash[initSettings.fileSize.sizeType]).toFixed(2) + ' ' + initSettings.fileSize.sizeType : null,
-						validDetail: validDetail,
-						checkValid: function() {
+								});
 
-							this.isValid = false;
-
-							if (validDetail.fileSize && validDetail.fileType && validDetail.imgSize) {
-								this.isValid = true;
 							}
-							return this;
-						}
-					}.checkValid();
 
-					return validateResult;
+
+
+
+							// 預覽
+
+
+/*
+							if (previewer) {
+								previewerWrap = previewer.parent('.hiiirImageuploadPreviewer-ie8-preview')[0]; // 取得原始js obj
+								previewerWrap.filters.item('DXImageTransform.Microsoft.AlphaImageLoader').src = imgSrc;
+								previewer.css('visibility', 'hidden');
+
+							}
+*/
+							
+
+							//
+							/*
+							var sh = setInterval(
+								function(){
+								var img = document.createElement("img");
+								img.src = imgSrc;
+								fileSize = img.fileSize;
+								console.log(fileSize);
+								if (fileSize > 0){ checkFileSize(sender,fileSize);clearInterval(sh);}
+								img = null;
+								}
+							,100);
+							*/
+						};
+					}
+				};
+				var getProcessor = function(type) {
+					return processorHash[type](validateHash[type]);
 				};
 
+				processor = getProcessor(initSettings.browser);
 
 				// 如果selector存在, 才綁定change事件
 				if (selector) {
-
 					selector.on('change', function() {
-						
-						var that = this;
-						var files = null;
-
-						var processorHash = {
-							'html5': function() {
-
-								var fileReaderForGetSize = new window.FileReader();
-						
-								files = that.files;
-
-								if (files.length > 0) {
-
-									var file = files[0];
-									var isValidObj = null;
-
-									// 取得圖片寬高後, 進行圖檔驗證
-									getImgSize(file, function(width, height, imgBinary) {
-
-										validObj = validate(file, width, height);
-			
-										// 驗證通過，顯示圖片在previewer, 不通過則拋出validateCallback
-										if (validObj.isValid && settings.previewer) {
-											settings.previewer.attr('src', imgBinary);
-										}
-										else {
-											if (typeof settings.validateCallback == 'function') {
-												settings.validateCallback(validObj);
-											}
-										}
-									});
-								}
-							},
-							'ie8': function() {
-
-								var objPreviewFake = document.getElementById( 'preview_fake' );
-								that.select();
-								var imgSrc = document.selection.createRange().text;
-
-								objPreviewFake.filters.item(
-								'DXImageTransform.Microsoft.AlphaImageLoader').src = imgSrc;
-
-								/*
-								var sh = setInterval(
-									function(){
-									var img = document.createElement("img");
-									img.src = imgSrc;
-									fileSize = img.fileSize;
-									console.log(fileSize);
-									if (fileSize > 0){ checkFileSize(sender,fileSize);clearInterval(sh);}
-									img = null;
-									}
-								,100);
-						*/
-							}
-						}
-
-
-						// 
-						if (window.FileReader) {
-							processorHash['html5']();
-						}
-						else if (isIE8Lte) { // ie8無法多檔案上傳
-
-
-						}
+						processor(this);
 					});
 				}
 			};
 			initChangeEvent(initSettings);
 		}
-		init();
-		
+		init(browser);
 	};
 
 })(jQuery, window, document);

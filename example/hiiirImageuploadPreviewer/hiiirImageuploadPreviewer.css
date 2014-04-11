@@ -1,9 +1,14 @@
 /* 用來做IE8預覽 */
-.hiiirImageuploadPreviewer-ie8_preview {
+.hiiirImageuploadPreviewer-ie8-preview {
   filter:progid:DXImageTransform.Microsoft.AlphaImageLoader(sizingMethod=scale);
+  border: 1px solid red;
 }
 
 /* 用來顯示IE8圖片尺寸 */
-.hiiirImageuploadPreviewer_ie8_size { 
-  filter:progid:DXImageTransform.Microsoft.AlphaImageLoader(sizingMethod=scale);
+.hiiirImageuploadPreviewer-ie8-size { 
+  filter:progid:DXImageTransform.Microsoft.AlphaImageLoader(sizingMethod=image);
+  visibility:hidden;
+  position: absolute;
+  top: -10000px;
+  left: -10000px;
 }
