@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Example</title>
+    <link href="hiiirImageuploadPreviewer/hiiirImageuploadPreviewer.css" rel="stylesheet">
+</head>
+
+<body>
+
+
+    <h1>圖片上傳預覽plugin</h1>
+
+    <img id="imagePreviewer"  src="images/no_pic_400_300.png">
+    <input id="imageUploader" type="file">
+
+
+    <script src="jquery-1.9.1.min.js"></script>
+    <script src="hiiirImageuploadPreviewer/hiiirImageuploadPreviewer.js"></script>
+
+    <script>
+    $(function() {
+
+        $('#imageUploader').hiiirImageuploadPreviewer({
+            previewer: $('#imagePreviewer'),
+            fileSize: '3000kb',
+            imgSize: {
+                width: '<1500',
+                height: '<3000'
+            },
+            imgType: ['png', 'jpg'],
+            validateCallback: function(validObj) {
+                // dosomething for validations
+                // ex. alert('your image is too big!!')
+            }
+        });
+    });
+    </script>
+
+</body>
+
+</html>
