@@ -8,7 +8,7 @@ Copyright 2014 Hiiir 台灣時間軸科技股份有限公司
 jquery版本支援: 1.4.1 up
 瀏覽器支援測試: chrome, firefox, safari, ie8
 
-套件描述: 可以對單張圖片上傳進行及時預覽，並且可以針對圖片檔案大小，尺寸與檔案類型做驗證過濾
+套件描述: 可以對單張圖片上傳進行及時預覽，並且可以針對圖片檔案大小，尺寸與檔案類型設定驗證條件
  */
 
 
@@ -249,12 +249,15 @@ $('#imageUploader').hiiirImageuploadPreviewer({ // input file selector, input fi
 					var previewerWrap = null;
 					var imgForSize = null;
 					var previewer = initSettings.getPreviewer(settings.previewer);
-					var previewerWidth = previewer.attr('width');
-					var previewerHeight = previewer.attr('height');
+					var previewerWidth = 0;
+					var previewerHeight = 0;
 					var hasPreviewWrap = false;
 					var hasImgForSize = false;
 
 					if (previewer) {
+
+						previewerWidth = previewer.attr('width');
+						previewerHeight = previewer.attr('height');
 
 						hasPreviewWrap = previewer.parent('.' + classNameHash.ie8Preview).length;
 						hasImgForSize = $(document).find('.' + classNameHash.ie8Size).length;
@@ -535,13 +538,19 @@ $('#imageUploader').hiiirImageuploadPreviewer({ // input file selector, input fi
 				var processor = null;
 				var previewer = initSettings.getPreviewer(settings.previewer);
 
-				var defaultPreviewerImageUrl = previewer.attr('src');
-				var defaultPreviewerWidth = previewer.css('width');
-				var defaultPreviewerHeight = previewer.css('height');
+			
 
 				var failRefresh = function(input, previewerWrap) {
 
+					var defaultPreviewerImageUrl = '';
+					var defaultPreviewerWidth = 0;
+					var defaultPreviewerHeight = 0;
+
 					if (previewer) {
+
+						defaultPreviewerImageUrl = previewer.attr('src');
+						defaultPreviewerWidth = previewer.css('width');
+						defaultPreviewerHeight = previewer.css('height');
 	
     					$(input).wrap('<form>').closest('form').get(0).reset();
     					$(input).unwrap();
@@ -594,7 +603,7 @@ $('#imageUploader').hiiirImageuploadPreviewer({ // input file selector, input fi
 											'width': defaultPreviewerWidth
 										});
 									}
-									else {
+									else if (!validObj.isValid) {
 										if (typeof settings.validateCallback == 'function') {
 											settings.validateCallback(validObj);
 											failRefresh(that);
@@ -631,7 +640,7 @@ $('#imageUploader').hiiirImageuploadPreviewer({ // input file selector, input fi
 						return function(that) {
 
 							var previewer = initSettings.getPreviewer(settings.previewer);
-							var previewerWrap = previewer.parent('.' + classNameHash.ie8Preview);
+							var previewerWrap = previewer ? previewer.parent('.' + classNameHash.ie8Preview) : null;
 							var imgSrc = '';
 							var fileName = $(that).val();
 
@@ -655,7 +664,7 @@ $('#imageUploader').hiiirImageuploadPreviewer({ // input file selector, input fi
 										previewerWrap[0].filters.item('DXImageTransform.Microsoft.AlphaImageLoader').src = imgSrc;
 										previewer.css('visibility', 'hidden');
 									}
-									else {
+									else if (!validObj.isValid) {
 										if (typeof settings.validateCallback == 'function') {
 											settings.validateCallback(validObj);
 											failRefresh(that, previewerWrap);
