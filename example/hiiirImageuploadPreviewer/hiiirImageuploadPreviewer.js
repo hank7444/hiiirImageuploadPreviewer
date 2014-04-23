@@ -19,6 +19,13 @@ jquery版本支援: 1.4.1 up
 更新描述: 建立元件
 版本: 1.0
 更新人: Hank Kuo
+
+日期: 2014-04-23
+更新描述: 修正html5部分預覽圖片出現"defaultPreviewerWidth not defined"的錯誤
+		 修正驗證功能在驗證圖片成功後，驗證其他類型檔案時驗證失效
+		 增加validMsg物件，裡面有簡單與詳細的驗證訊息，方便直接顯示不需要自己再花時間組合驗證訊息
+版艮: 1.01
+更新人: Hank Kuo
 */
 
 
@@ -176,6 +183,7 @@ $('#imageUploader').hiiirImageuploadPreviewer({ // input file selector, input fi
 
 					var regexBeginForFileName = '(\.|\/)(';
 					var regexBeginForFileType = '^(?:';
+					var fileTypeStr = '';
 					var regexEnd = ')$';
 					var lastIndex = 0;
 		
@@ -185,10 +193,13 @@ $('#imageUploader').hiiirImageuploadPreviewer({ // input file selector, input fi
 
 						$.each(imgTypeAry, function(index, value) {
 
+
+							fileTypeStr += value;
 							regexBeginForFileName += value;
 							regexBeginForFileType += imageTypeValidateHash[value];
 
 							if (index < lastIndex) {
+								fileTypeStr += ', ';
 								regexBeginForFileName += '|';
 								regexBeginForFileType += '|';
 							}
@@ -201,10 +212,12 @@ $('#imageUploader').hiiirImageuploadPreviewer({ // input file selector, input fi
 
 						$.each(imageTypeValidateHash, function(index) {
 
+							fileTypeStr += index;
 							regexBeginForFileName += index;
 							regexBeginForFileType += imageTypeValidateHash[index];
 
 							if (count < lastIndex) {
+								fileTypeStr += ', ';
 								regexBeginForFileName += '|';
 								regexBeginForFileType += '|';
 							}
@@ -212,6 +225,7 @@ $('#imageUploader').hiiirImageuploadPreviewer({ // input file selector, input fi
 						});
 					}
 					return {
+						'fileTypeStr': fileTypeStr,
 						'fileName': new RegExp(regexBeginForFileName + regexEnd, 'i'),
 						'fileType': new RegExp(regexBeginForFileType + regexEnd, 'i'),
 						'fileTypeAry': imgTypeAry
@@ -327,23 +341,56 @@ $('#imageUploader').hiiirImageuploadPreviewer({ // input file selector, input fi
 			// 將驗證結果整理後輸出
 			var validResultOutputer = function(fileHash) {
 
+
 				var fileName = fileHash.fileName;
+				var fileExtension = fileHash.fileExtension;
 				var fileSize = fileHash.fileSize || null;
 				var fileSizeReading = fileSize ? (fileSize / sizeTypeHash[initSettings.fileSize.sizeType]).toFixed(2) + ' ' + initSettings.fileSize.sizeType : null;
 				var width = fileHash.width;
 				var height = fileHash.height;
 				var isValid = true;
-
-				if (!validDetail.fileType) {
-					isValid = false;
-				}
+				var validMsgShort = {
+					'fileSize': '',
+					'fileType': '',
+					'imgSize': ''
+				};
+				var validMsgDetail = {
+					'fileSize': '',
+					'fileType': '',
+					'imgSize': ''
+				};
+				var validMsgShortForShow = '';
+				var validMsgDetailForShow = '';
 
 				if (fileSize && !validDetail.fileSize) {
 					isValid = false;
+					validMsgShort.fileSize = '上傳圖片檔案大小不符合設定';
+					validMsgDetail.fileSize = '上傳圖片檔案大小不符合設定，上傳圖片檔案大小為： ' + fileSizeReading;
+					validMsgDetail.fileSize += '，設定的圖片檔案大小限制為： ' + initSettings.fileSize.originStr;
+
+					validMsgShortForShow += validMsgShort.fileSize + '<br>';
+					validMsgDetailForShow += validMsgDetail.fileSize + '<br>';
 				}
-				
+
+				if (!validDetail.fileType) {
+					isValid = false;
+					validMsgShort.fileType = '上傳圖片檔案類型不符合設定';
+					validMsgDetail.fileType = '上傳圖片檔案類型不符合設定，上傳圖片檔案類型為： ' + fileExtension;
+					validMsgDetail.fileType += '，設定的圖片檔案類型為： ' + initSettings.imgTypeRegex.fileTypeStr;
+
+					validMsgShortForShow += validMsgShort.fileType + '<br>';
+					validMsgDetailForShow += validMsgDetail.fileType + '<br>';
+				}
+
 				if (width && height && !validDetail.imgSize) {
 					isValid = false;
+					validMsgShort.imgSize = '上傳圖片尺寸不符合設定';
+					validMsgDetail.imgSize = '上傳圖片尺寸不符合設定，上傳圖片寬度： ' + width + '，高度為： ' + height + '，設定的圖片寬度限制為： ';
+					validMsgDetail.imgSize += initSettings.imgSize.width.condition + ' ' + initSettings.imgSize.width.value;
+					validMsgDetail.imgSize += '，設定的圖片寬度限制為： ' + initSettings.imgSize.height.condition + ' ' + initSettings.imgSize.height.value;
+					
+					validMsgShortForShow += validMsgShort.imgSize + '<br>';
+					validMsgDetailForShow += validMsgDetail.imgSize + '<br>';
 				}
 				
 				return {
@@ -354,6 +401,12 @@ $('#imageUploader').hiiirImageuploadPreviewer({ // input file selector, input fi
 					height: height,
 					isValid: isValid,
 					validDetail: validDetail,
+					validMsg: {
+						validMsgShort: validMsgShort,
+						validMsgDetail: validMsgDetail,
+						validMsgShortForShow: validMsgShortForShow,
+						validMsgDetailForShow: validMsgDetailForShow
+					},
 					settings: {
 						fileSize: initSettings.fileSize,
 						imgSize: initSettings.imgSize,
@@ -380,6 +433,10 @@ $('#imageUploader').hiiirImageuploadPreviewer({ // input file selector, input fi
 					isValidHeight = imgSizeConditionHash[validHeightCondi](height, validHeight);
 				}
 				return isValidWidth && isValidHeight;
+			};
+
+			var getFileExtension = function(fileName) {
+				return fileName.substr((~-fileName.lastIndexOf('.') >>> 0) + 2);
 			};
 
 
@@ -419,12 +476,21 @@ $('#imageUploader').hiiirImageuploadPreviewer({ // input file selector, input fi
 						},
 						validate: function(file, width, height) {
 
+
 							var fileName = file.name;
+							var fileExtension = getFileExtension(fileName);
 							var fileSize = file.size;
 							var fileType = file.type;
 							var width = width;
 							var height = height;
-					
+
+							// reset validDetail
+							validDetail = {
+								fileSize: false,
+								fileType: false,
+								imgSize: false
+							};
+
 							// 驗證檔案大小
 							if (initSettings.fileSize.size > fileSize) {
 								validDetail.fileSize = true;
@@ -443,21 +509,13 @@ $('#imageUploader').hiiirImageuploadPreviewer({ // input file selector, input fi
 									validDetail.fileType = true;
 								}	
 							}
-							/*
-							console.log(validWidthCondi);
-							console.log(validHeightCondi);
-							console.log(width);
-							console.log(height);
-							console.log(validWidth);
-							console.log(validHeight);
-							console.log(isValidWidth);
-							console.log(isValidHeight);
-							*/
+				
 							validDetail.imgSize = validImgSize(width, height);
 						
-
 							var data = {
+								fileType: fileType,
 								fileName: fileName,
+								fileExtension: fileExtension,
 								fileSize: fileSize || null,
 								width: width,
 								height: height
@@ -508,10 +566,17 @@ $('#imageUploader').hiiirImageuploadPreviewer({ // input file selector, input fi
 							}
 						},
 						validate: function(fileName, width, height) {
-		
+
 							var fileName = fileName;
+							var fileExtension = getFileExtension(fileName);
 							var width = width;
 							var height = height;
+
+							validDetail = {
+								fileSize: false,
+								fileType: false,
+								imgSize: false
+							};
 
 							if (initSettings.imgTypeRegex.fileName.test(fileName)) {
 								validDetail.fileType = true;
@@ -521,6 +586,7 @@ $('#imageUploader').hiiirImageuploadPreviewer({ // input file selector, input fi
 
 							var data = {
 								fileName: fileName,
+								fileExtension: fileExtension,
 								width: width,
 								height: height
 							};
@@ -599,9 +665,6 @@ $('#imageUploader').hiiirImageuploadPreviewer({ // input file selector, input fi
 									if (validObj.isValid && settings.previewer && width && height) {
 
 										settings.previewer.attr('src', imgBinary);
-										settings.previewer.css({
-											'width': defaultPreviewerWidth
-										});
 									}
 									else if (!validObj.isValid) {
 										if (typeof settings.validateCallback == 'function') {
