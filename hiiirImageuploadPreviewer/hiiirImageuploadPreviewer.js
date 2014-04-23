@@ -24,6 +24,7 @@ jquery版本支援: 1.4.1 up
 更新描述: 修正html5部分預覽圖片出現"defaultPreviewerWidth not defined"的錯誤
 		 修正驗證功能在驗證圖片成功後，驗證其他類型檔案時驗證失效
 		 增加validMsg物件，裡面有簡單與詳細的驗證訊息，方便直接顯示不需要自己再花時間組合驗證訊息
+		 增加驗證圖片寬高比
 版艮: 1.01
 更新人: Hank Kuo
 */
@@ -39,6 +40,7 @@ $('#imageUploader').hiiirImageuploadPreviewer({ // input file selector, input fi
         width: '<1500', // 圖片寬度: 可用 '>', '<', '>=', '<=', '==', 如果不寫則不驗證
         height: '<3000' // 圖片高度: 可用 '>', '<', '>=', '<=', '==', 如果不寫則不驗證
     },
+    imgSizeEqualScale: false, // 是否要驗證圖片寬高比
     imgType: ['png', 'jpg'], // 圖片類型: 目前只開放 jpg, png, bmp, gif, tiff等格式, 如果不寫則判斷全部內建格式
     validateCallback: function(validObj) { // 驗證錯誤callback function
         // dosomething for validations
@@ -83,8 +85,9 @@ $('#imageUploader').hiiirImageuploadPreviewer({ // input file selector, input fi
 		fileSize: '2mb', // 可用 'kb', 'mb', 0代表不驗證
 		imgSize: {
 			width: 0, // 可下 '>, <, >=, <= 符號, 若沒下任何符號代表 ==, 0代表不驗證'
-			height: 0 // 可下 '>. <, >=, <= 符號, 若沒下任何符號代表 ==, 0代表不驗證'
+			height: 0, // 可下 '>. <, >=, <= 符號, 若沒下任何符號代表 ==, 0代表不驗證'
 		},
+		imgSizeEqualScale: false, // 如果是true, 就要檢查圖片比例跟設定的圖片比例是否相同, 精度小數點後2位
 		imgType: [], // 可復合判斷 jpg, jpeg, png, bmp, gif, tiff等圖片檔案格式
 		validateCallback: null, // 驗證失敗時呼叫
 		startPreviewCallback: null, // 照片開始丟到previwer時呼叫
@@ -243,6 +246,7 @@ $('#imageUploader').hiiirImageuploadPreviewer({ // input file selector, input fi
 					'previewer': previewer,
 					'fileSize': fileSize,
 					'imgSize': imgSize,
+					'imgSizeEqualScale': settings.imgSizeEqualScale,
 					'imgTypeRegex': imgType,
 					'getImgTypeAry': getImgTypeAry,
 					'getPreviewer': getPreviewer,
@@ -346,18 +350,21 @@ $('#imageUploader').hiiirImageuploadPreviewer({ // input file selector, input fi
 				var fileExtension = fileHash.fileExtension;
 				var fileSize = fileHash.fileSize || null;
 				var fileSizeReading = fileSize ? (fileSize / sizeTypeHash[initSettings.fileSize.sizeType]).toFixed(2) + ' ' + initSettings.fileSize.sizeType : null;
+				var imgEqualScaleData = fileHash.imgEqualScaleData;
 				var width = fileHash.width;
 				var height = fileHash.height;
 				var isValid = true;
 				var validMsgShort = {
 					'fileSize': '',
 					'fileType': '',
-					'imgSize': ''
+					'imgSize': '',
+					'imgEqualScale': ''
 				};
 				var validMsgDetail = {
 					'fileSize': '',
 					'fileType': '',
-					'imgSize': ''
+					'imgSize': '',
+					'imgEqualScale': ''
 				};
 				var validMsgShortForShow = '';
 				var validMsgDetailForShow = '';
@@ -392,25 +399,36 @@ $('#imageUploader').hiiirImageuploadPreviewer({ // input file selector, input fi
 					validMsgShortForShow += validMsgShort.imgSize + '<br>';
 					validMsgDetailForShow += validMsgDetail.imgSize + '<br>';
 				}
+
+				if (!validDetail.imgEqualScale) {
+					isValid = false;
+					validMsgShort.imgEqualScale = '上傳圖片尺寸比例不符合設定';
+					validMsgDetail.imgEqualScale = '上傳圖片尺寸比例不符合設定，上傳圖片比例： ' + imgEqualScaleData.scale;
+					validMsgDetail.imgEqualScale += '，設定的圖片比例為： ' + imgEqualScaleData.validScale;
+
+					validMsgShortForShow += validMsgShort.imgEqualScale + '<br>';
+					validMsgDetailForShow += validMsgDetail.imgEqualScale + '<br>';
+				}
 				
 				return {
-					fileName: fileName,
-					fileSize: fileSize,
-					fileSizeReading: fileSizeReading,
-					width: width,
-					height: height,
-					isValid: isValid,
-					validDetail: validDetail,
-					validMsg: {
-						validMsgShort: validMsgShort,
-						validMsgDetail: validMsgDetail,
-						validMsgShortForShow: validMsgShortForShow,
-						validMsgDetailForShow: validMsgDetailForShow
+					'fileName': fileName,
+					'fileSize': fileSize,
+					'fileSizeReading': fileSizeReading,
+					'width': width,
+					'height': height,
+					'imgEqualScaleData': imgEqualScaleData,
+					'isValid': isValid,
+					'validDetail': validDetail,
+					'validMsg': {
+						'validMsgShort': validMsgShort,
+						'validMsgDetail': validMsgDetail,
+						'validMsgShortForShow': validMsgShortForShow,
+						'validMsgDetailForShow': validMsgDetailForShow
 					},
-					settings: {
-						fileSize: initSettings.fileSize,
-						imgSize: initSettings.imgSize,
-						fileType: initSettings.imgTypeRegex.fileTypeAry
+					'settings': {
+						'fileSize': initSettings.fileSize,
+						'imgSize': initSettings.imgSize,
+						'fileType': initSettings.imgTypeRegex.fileTypeAry,
 					}
 				};
 			};
@@ -418,7 +436,7 @@ $('#imageUploader').hiiirImageuploadPreviewer({ // input file selector, input fi
 			// 驗證圖片尺寸是否合乎使用者的設定
 			var validImgSize = function(width, height) {
 
-					// 驗證圖片長寬大小
+				// 驗證圖片長寬大小
 				var validWidth = initSettings.imgSize.width.value;
 				var validWidthCondi = initSettings.imgSize.width.condition;
 				var validHeight = initSettings.imgSize.height.value; 
@@ -433,6 +451,21 @@ $('#imageUploader').hiiirImageuploadPreviewer({ // input file selector, input fi
 					isValidHeight = imgSizeConditionHash[validHeightCondi](height, validHeight);
 				}
 				return isValidWidth && isValidHeight;
+			};
+
+			// 驗證圖片尺寸比例是否與設定相符
+			var validImgScale = function(width, height) {
+
+				var validWidth = initSettings.imgSize.width.value;
+				var validHeight = initSettings.imgSize.height.value; 
+				var validScale = (validWidth / validHeight).toFixed(2);
+				var scale = (width / height).toFixed(2);
+
+				return {
+					'imgEqualScale': validScale == scale,
+					'validScale': validScale,
+					'scale': scale
+				};
 			};
 
 			var getFileExtension = function(fileName) {
@@ -483,12 +516,14 @@ $('#imageUploader').hiiirImageuploadPreviewer({ // input file selector, input fi
 							var fileType = file.type;
 							var width = width;
 							var height = height;
+							var imgEqualScaleData = null;
 
 							// reset validDetail
 							validDetail = {
 								fileSize: false,
 								fileType: false,
-								imgSize: false
+								imgSize: false,
+								imgEqualScale: true
 							};
 
 							// 驗證檔案大小
@@ -511,12 +546,20 @@ $('#imageUploader').hiiirImageuploadPreviewer({ // input file selector, input fi
 							}
 				
 							validDetail.imgSize = validImgSize(width, height);
+
+
+							if (initSettings.imgSizeEqualScale) {
+
+								imgEqualScaleData = validImgScale(width, height);
+								validDetail.imgEqualScale = imgEqualScaleData.imgEqualScale;
+							}
 						
 							var data = {
 								fileType: fileType,
 								fileName: fileName,
 								fileExtension: fileExtension,
 								fileSize: fileSize || null,
+								imgEqualScaleData: imgEqualScaleData,
 								width: width,
 								height: height
 							};
@@ -571,11 +614,13 @@ $('#imageUploader').hiiirImageuploadPreviewer({ // input file selector, input fi
 							var fileExtension = getFileExtension(fileName);
 							var width = width;
 							var height = height;
+							var imgEqualScaleData = null;
 
 							validDetail = {
 								fileSize: false,
 								fileType: false,
-								imgSize: false
+								imgSize: false,
+								imgEqualScale: true
 							};
 
 							if (initSettings.imgTypeRegex.fileName.test(fileName)) {
@@ -584,9 +629,16 @@ $('#imageUploader').hiiirImageuploadPreviewer({ // input file selector, input fi
 
 							validDetail.imgSize = validImgSize(width, height);
 
+							if (initSettings.imgSizeEqualScale) {
+
+								imgEqualScaleData = validImgScale(width, height);
+								validDetail.imgEqualScale = imgEqualScaleData.imgEqualScale;
+							}
+
 							var data = {
 								fileName: fileName,
 								fileExtension: fileExtension,
+								imgEqualScaleData: imgEqualScaleData,
 								width: width,
 								height: height
 							};

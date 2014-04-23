@@ -26,11 +26,12 @@
 
         $('#imageUploader').hiiirImageuploadPreviewer({
             previewer: $('#imagePreviewer'),
-            fileSize: '5000kb',
+            fileSize: '2000kb',
             imgSize: {
-                width: '<20000',
-                height: '<8000'
+                width: '<500',
+                height: '<2000'
             },
+            imgSizeEqualScale: true,
             imgType: ['png', 'jpg'],
             validateCallback: function(validObj) {
                 // dosomething for validations
