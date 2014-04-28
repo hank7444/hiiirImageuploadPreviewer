@@ -28,15 +28,20 @@
             previewer: $('#imagePreviewer'),
             fileSize: '2000kb',
             imgSize: {
-                width: '<500',
+                width: '<2500',
                 height: '<2000'
             },
             imgSizeEqualScale: true,
             imgType: ['png', 'jpg'],
+            defaultImg: {
+                url: 'images/1px.png',
+                width: '100',
+                height: '200'
+            },
             validateCallback: function(validObj) {
                 // dosomething for validations
                 // ex. alert('your image is too big!!')
-                console.log(validObj);
+                //console.log(validObj);
             }
         });
     });

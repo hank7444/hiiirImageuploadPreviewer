@@ -25,7 +25,12 @@ jquery版本支援: 1.4.1 up
 		 修正驗證功能在驗證圖片成功後，驗證其他類型檔案時驗證失效
 		 增加validMsg物件，裡面有簡單與詳細的驗證訊息，方便直接顯示不需要自己再花時間組合驗證訊息
 		 增加驗證圖片寬高比
-版艮: 1.01
+版本: 1.01
+更新人: Hank Kuo
+
+日期: 2014-04-28
+更新描述: 增加defaultImg參數，可設定若驗證失敗，要顯示的預設圖，若無設定則顯示上一次成功上傳的預覽圖
+版本: 1.02
 更新人: Hank Kuo
 */
 
@@ -45,7 +50,12 @@ $('#imageUploader').hiiirImageuploadPreviewer({ // input file selector, input fi
     validateCallback: function(validObj) { // 驗證錯誤callback function
         // dosomething for validations
         // ex. alert('your image is too big!!')
-    }
+    },
+   	defaultImg: { // 設定若驗證失敗，要顯示的預設圖，若無設定則顯示上一次成功上傳的預覽圖
+        url: 'images/1px.png',
+        width: '100',
+        height: '200'
+    },
 });
 */
 ;
@@ -91,6 +101,7 @@ $('#imageUploader').hiiirImageuploadPreviewer({ // input file selector, input fi
 		imgType: [], // 可復合判斷 jpg, jpeg, png, bmp, gif, tiff等圖片檔案格式
 		validateCallback: null, // 驗證失敗時呼叫
 		startPreviewCallback: null, // 照片開始丟到previwer時呼叫
+		defaultImg: '' // 如果沒照片時, 要顯示的預設圖
 	};
 	var classNameHash = {
 		'ie8Preview': 'hiiirImageuploadPreviewer-ie8-preview',
@@ -135,6 +146,9 @@ $('#imageUploader').hiiirImageuploadPreviewer({ // input file selector, input fi
 
 						if (!previewer.is('img')) {
 							previewer = null;
+						}
+						else {
+
 						}
 					}
 					return previewer;
@@ -655,6 +669,7 @@ $('#imageUploader').hiiirImageuploadPreviewer({ // input file selector, input fi
 				var isIE8Lte = isIE(8, 'lte');
 				var processor = null;
 				var previewer = initSettings.getPreviewer(settings.previewer);
+				var defaultImg = settings.defaultImg;
 
 			
 
@@ -672,7 +687,15 @@ $('#imageUploader').hiiirImageuploadPreviewer({ // input file selector, input fi
 	
     					$(input).wrap('<form>').closest('form').get(0).reset();
     					$(input).unwrap();
+
+    					if (defaultImg.url) {
+    						defaultPreviewerImageUrl = defaultImg.url;
+    						defaultPreviewerWidth = defaultImg.width;
+    						defaultPreviewerHeight = defaultImg.height;
+    					}
 						
+
+						// 	IE8用
 						if (previewerWrap) {
 							
 							previewerWrap.css({
@@ -691,8 +714,24 @@ $('#imageUploader').hiiirImageuploadPreviewer({ // input file selector, input fi
 
 						}
 						else {
-							previewer.attr('src', defaultPreviewerImageUrl);
+
+							// 如果有攝定defaultImg, 就要顯示
+							if (defaultImg.url) {
+
+								defaultImg.width =  defaultImg.width || 1;
+								defaultImg.height =  defaultImg.height || 1;
+
+								previewer.attr('src', defaultImg.url);
+								previewer.css({
+									'width': defaultImg.width + 'px',
+									'height': defaultImg.height + 'px'
+								});
+							}
+							else {
+								previewer.attr('src', defaultPreviewerImageUrl);
+							}
 							previewer.css({'visibility': 'visible'});
+							
 						}
 					}
 				};
