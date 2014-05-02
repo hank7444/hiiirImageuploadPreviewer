@@ -32,6 +32,11 @@ jquery版本支援: 1.4.1 up
 更新描述: 增加defaultImg參數，可設定若驗證失敗，要顯示的預設圖，若無設定則顯示上一次成功上傳的預覽圖
 版本: 1.02
 更新人: Hank Kuo
+
+日期: 2014-05-02
+更新描述: 增加successCallback, 當照片通過驗證時呼叫
+版本: 1.03
+更新人: Hank Kuo
 */
 
 
@@ -99,6 +104,7 @@ $('#imageUploader').hiiirImageuploadPreviewer({ // input file selector, input fi
 		},
 		imgSizeEqualScale: false, // 如果是true, 就要檢查圖片比例跟設定的圖片比例是否相同, 精度小數點後2位
 		imgType: [], // 可復合判斷 jpg, jpeg, png, bmp, gif, tiff等圖片檔案格式
+		successCallback: null, // 驗證成功時呼叫
 		validateCallback: null, // 驗證失敗時呼叫
 		startPreviewCallback: null, // 照片開始丟到previwer時呼叫
 		defaultImg: '' // 如果沒照片時, 要顯示的預設圖
@@ -756,6 +762,7 @@ $('#imageUploader').hiiirImageuploadPreviewer({ // input file selector, input fi
 									if (validObj.isValid && settings.previewer && width && height) {
 
 										settings.previewer.attr('src', imgBinary);
+										settings.successCallback();
 									}
 									else if (!validObj.isValid) {
 										if (typeof settings.validateCallback == 'function') {
@@ -817,6 +824,7 @@ $('#imageUploader').hiiirImageuploadPreviewer({ // input file selector, input fi
 										});
 										previewerWrap[0].filters.item('DXImageTransform.Microsoft.AlphaImageLoader').src = imgSrc;
 										previewer.css('visibility', 'hidden');
+										settings.successCallback();
 									}
 									else if (!validObj.isValid) {
 										if (typeof settings.validateCallback == 'function') {
