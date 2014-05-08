@@ -37,6 +37,11 @@ jquery版本支援: 1.4.1 up
 更新描述: 增加successCallback, 當照片通過驗證時呼叫
 版本: 1.03
 更新人: Hank Kuo
+
+日期: 2014-05-08
+更新描述: 修正判斷successCallback存在並且為function才呼叫
+版本: 1.04
+更新人: Hank Kuo
 */
 
 
@@ -762,7 +767,10 @@ $('#imageUploader').hiiirImageuploadPreviewer({ // input file selector, input fi
 									if (validObj.isValid && settings.previewer && width && height) {
 
 										settings.previewer.attr('src', imgBinary);
-										settings.successCallback();
+
+										if (typeof settings.successCallback == 'function') {
+											settings.successCallback();
+										}
 									}
 									else if (!validObj.isValid) {
 										if (typeof settings.validateCallback == 'function') {
@@ -824,7 +832,10 @@ $('#imageUploader').hiiirImageuploadPreviewer({ // input file selector, input fi
 										});
 										previewerWrap[0].filters.item('DXImageTransform.Microsoft.AlphaImageLoader').src = imgSrc;
 										previewer.css('visibility', 'hidden');
-										settings.successCallback();
+
+										if (typeof settings.successCallback == 'function') {
+											settings.successCallback();
+										}
 									}
 									else if (!validObj.isValid) {
 										if (typeof settings.validateCallback == 'function') {
