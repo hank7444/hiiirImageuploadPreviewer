@@ -61,6 +61,9 @@ $('#imageUploader').hiiirImageuploadPreviewer({ // input file selector, input fi
         // dosomething for validations
         // ex. alert('your image is too big!!')
     },
+    successCallback: function() {
+		// dosomething
+    },
    	defaultImg: { // 設定若驗證失敗，要顯示的預設圖，若無設定則顯示上一次成功上傳的預覽圖
         url: 'images/1px.png',
         width: '100',
